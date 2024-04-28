@@ -47,8 +47,5 @@ def extract_text_from_image(image_path):
                 extracted_text += line.text + '\n'
         return extracted_text
 
-if __name__ == '__main__':
-    # Specify the folder path containing the images
-    folder_path = 'Images'
 
 
