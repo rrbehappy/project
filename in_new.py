@@ -47,23 +47,8 @@ def extract_text_from_image(image_path):
                 extracted_text += line.text + '\n'
         return extracted_text
 
-# Function to process all images in a folder
-def process_images_in_folder(folder_path):
-    extracted_text = {}
-    for filename in os.listdir(folder_path):
-        if filename.endswith('.jpg') or filename.endswith('.jpeg') or filename.endswith('.png'):
-            image_path = os.path.join(folder_path, filename)
-            text = extract_text_from_image(image_path)
-            extracted_text[filename] = text
-            print(f"Text extracted from {filename}")
-
-    # Insert extracted text into MongoDB with a single ObjectID
-    collection.insert_one({'_id': ObjectId(), 'text_data': extracted_text})
-    print("Extracted text saved to MongoDB")
-
 if __name__ == '__main__':
     # Specify the folder path containing the images
     folder_path = 'Images'
 
-    # Call the function to process all images in the folder
-    process_images_in_folder(folder_path)
+

@@ -8,7 +8,7 @@ import io
 import json
 import requests
 from nlp_module import compare_and_extract_keywords
-from in_new import extract_text_and_save_to_mongodb
+from in_new import extract_text_from_image
 from pdf_handler import get_pdf_path,read_pdf_content
 
 
@@ -18,6 +18,7 @@ uri = credential['MONGODB_URI']
 # Initialize PyMongo with the Flask app
 client = MongoClient(uri,ssl=True,tlsCAFile=certifi.where())
 db = client['capstone']
+collection = db['Extraction']
 
 
 # Send a ping to confirm a successful connection
@@ -113,30 +114,38 @@ def analyze_text_similarity():
         return jsonify({'error': 'An error occurred while processing the request.', 'details': str(e)}), 500
 
 
-@app.route('/admin/api/exams/performocr', methods=['GET', 'POST'])
+@app.route('/admin/api/performocr', methods=['POST'])
 def perform_ocr():
-    if request.method == 'POST':
-        # Check if file is in request
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file provided'}), 400
-        
-        file = request.files['file']
-        
-        # Check if file is an image
+    if 'files[]' not in request.files or 'question_number' not in request.form:
+        return jsonify({'error': 'Files or question number not provided in the request'}), 400
+    
+    files = request.files.getlist('files[]')
+    question_number = request.form['question_number']
+    extracted_text = []
+
+    for file in files:
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
+        
         if file:
             # Save file to server
-            image_path = 'uploaded_image.jpg'
+            image_path = 'uploaded_image_' + file.filename
             file.save(image_path)
             
-            # Extract text and save to MongoDB
-            extract_text_and_save_to_mongodb(image_path)
-            
-            return jsonify({'message': 'Text extracted and saved to MongoDB successfully'}), 200
-        else:
-            return jsonify({'error': 'Unsupported file format'}), 400
-    else:
-        return render_template('upload.html')
+            # Extract text from the image
+            text = extract_text_from_image(image_path)
+            extracted_text.append(text)
+
+    # Compile entire scanned text from all images
+    entire_text = '\n'.join(extracted_text)
+
+    # Store extracted text in MongoDB collection
+    collection.insert_one({'question_number': question_number, 'text_data': entire_text})
+    print("Extracted text saved to MongoDB")
+
+    return jsonify({'message': 'Text extracted and saved to MongoDB successfully'}), 200
 
 
+if __name__ == '__main__':
+    # Move the print statement inside a route or function if needed
+    app.run(debug=True)
